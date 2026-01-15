@@ -1,50 +1,154 @@
-# Welcome to your Expo app 👋
+# App de Navegação React Native com Expo Router
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicativo React Native demonstrando boas práticas de navegação e UX usando **Expo Router** (file-based routing).
 
-## Get started
+## Características
 
-1. Install dependencies
+-  **Bottom Tab Navigation** (Home + Profile)
+-  **Stack Navigation** interno na tab Home
+-  **Tratamento completo de estados UX**:
+  - Loading
+  - Empty (sem dados)
+  - Error (com retry)
+-  **Deep Linking** configurado (`meuapp://`)
+-  **TypeScript**
+-  **Implementações inline** (sem componentes reutilizáveis)
 
-   ```bash
-   npm install
-   ```
+##  Estrutura de Navegação
 
-2. Start the app
+### Hierarquia de Rotas (File-Based)
 
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+app/
+├── _layout.tsx                    # Root Layout (Stack)
+├── (tabs)/                        # Tab Group
+│   ├── _layout.tsx               # Bottom Tab Navigator
+│   ├── (home)/                   # Home Tab (Stack group)
+│   │   ├── _layout.tsx          # Stack Navigator
+│   │   ├── index.tsx            # Home Screen
+│   │   └── details/
+│   │       └── [id].tsx         # Details Screen (dynamic route)
+│   └── profile.tsx              # Profile Screen
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Navegação Visual
 
-## Learn more
+```
+Root (Stack)
+  └── Tabs (Bottom)
+      ├── Home (Stack)
+      │   ├── Home Screen
+      │   └── Details Screen
+      └── Profile Screen
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+##  Tratamento de Estados UX
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Todas as telas garantem que **nenhuma tela fique em branco**, tratando os seguintes estados:
 
-## Join the community
+| Tela | Loading | Empty | Error |
+|------|---------|-------|-------|
+| **Home** | ✅ ActivityIndicator durante 2s | ✅ Mensagem "Nenhum dado disponível" | - |
+| **Details** | ✅ ActivityIndicator durante 1.5s | - | ✅ Mensagem de erro + botão "Tentar Novamente" |
+| **Profile** | ✅ ActivityIndicator durante 1.5s | ✅ Mensagem "Nenhum perfil disponível" | - |
 
-Join our community of developers creating universal apps.
+### Onde os Estados são Tratados
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+#### Home Screen (`app/(tabs)/(home)/index.tsx`)
+- **Loading**: Linhas 27-35 - Exibe ActivityIndicator + texto
+- **Empty**: Linhas 38-44 - Exibe mensagem quando `data.length === 0`
+- **Data**: Linhas 47-65 - Exibe lista de itens + botão de navegação
+
+#### Details Screen (`app/(tabs)/(home)/details/[id].tsx`)
+- **Loading**: Linhas 47-54 - Exibe ActivityIndicator + texto
+- **Error**: Linhas 57-68 - Exibe mensagem de erro + botão de retry
+- **Data**: Linhas 71-78 - Exibe detalhes do item com ID recebido
+- **Retry Logic**: Função `loadData()` (linhas 16-35) - Pode ser chamada novamente
+
+#### Profile Screen (`app/(tabs)/profile.tsx`)
+- **Loading**: Linhas 28-35 - Exibe ActivityIndicator + texto
+- **Empty**: Linhas 38-46 - Exibe mensagem quando `profile === null`
+- **Data**: Linhas 49-66 - Exibe informações do perfil
+
+## Deep Linking
+
+### Configuração
+
+O deep linking está configurado no `app.json`:
+
+```json
+{
+  "expo": {
+    "scheme": "meuapp"
+  }
+}
+```
+
+O Expo Router **mapeia automaticamente** as rotas baseado na estrutura de arquivos:
+
+- `meuapp://` → Abre a raiz do app (tabs)
+- `meuapp://details/1` → Abre `Details` com `id=1` ✅
+- `meuapp://details/123` → Abre `Details` com `id=123`
+- `meuapp://profile` → Abre a aba Profile
+
+### Como Testar Deep Links
+
+#### No Android:
+```bash
+npx uri-scheme open meuapp://details/1 --android
+```
+
+#### No iOS:
+```bash
+npx uri-scheme open meuapp://details/1 --ios
+```
+
+#### Durante desenvolvimento (Expo Go):
+Escaneie o QR code ou use:
+```bash
+npx expo start
+# Digite 's' para alternar para Expo Go
+```
+
+## 🚀 Como Executar
+
+### 1. Instalar dependências:
+```bash
+npm install
+```
+
+### 2. Iniciar o servidor de desenvolvimento:
+```bash
+npx expo start
+```
+
+### 3. Executar no dispositivo:
+
+**Android:**
+```bash
+npx expo start --android
+```
+
+**iOS:**
+```bash
+npx expo start --ios
+```
+
+**Web:**
+```bash
+npx expo start --web
+```
+
+### 4. Usar Expo Go (alternativa):
+- Instale o app Expo Go no seu dispositivo
+- Escaneie o QR code exibido no terminal
+
+## 📱 Fluxo de Uso
+
+1. **App inicia** → Exibe Bottom Tabs (Home e Profile)
+2. **Tab Home** → Mostra loading por 2 segundos → Exibe lista de itens
+3. **Clique em "Ir para Details"** → Navega para tela Details com ID `123`
+4. **Details carrega** → 50% de chance de erro ou sucesso
+   - Se **erro** → Exibe mensagem + botão "Tentar Novamente"
+   - Se **sucesso** → Exibe detalhes do item
+5. **Tab Profile** → Mostra loading → Exibe perfil do usuário
